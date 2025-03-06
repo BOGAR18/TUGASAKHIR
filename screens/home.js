@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Box, Image, Text, Heading, VStack, Icon, Button } from "native-base";
+import { ScrollView } from "react-native";
+import { Box, Image, Text, Heading, VStack, Icon, Button, HStack } from "native-base";
 import Header from "../components/header";
 import { MaterialIcons } from "@expo/vector-icons";
 import FIREBASE from "../actions/config/FIREBASE";
@@ -13,14 +14,11 @@ const Home = () => {
     const getUserData = async () => {
         try {
             const userData = await getData("user");
-
             if (userData) {
                 const userRef = FIREBASE.database().ref(`users/${userData.uid}`);
                 const snapshot = await userRef.once("value");
                 const updatedUserData = snapshot.val();
-
                 if (updatedUserData) {
-                    console.log("Updated user data:", updatedUserData);
                     setHome(updatedUserData);
                 } else {
                     console.log("User data not found");
@@ -39,63 +37,150 @@ const Home = () => {
     }, [navigation]);
 
     return (
-        <>
-            <Header title={"Home"} />
-                <Box w="100%" h="100%" bg="white" borderTopRadius={40}  pb={40}>
-                    <Box bgColor="blue.600" p={5} roundedBottomLeft={40} roundedBottomRight={40} shadow={2}>
-                        <Text fontSize={20} color="white" fontWeight="bold">Selamat Datang di Inventory PLN</Text>
-                        <Text fontWeight="bold" fontSize={20} color="white"> {Home?.name}</Text>
+        <Box flex={1} bg="white">
+            <ScrollView showsVerticalScrollIndicator={false}>
+                <Header title={"Home"} />
+                
+                {/* Hero Section with Gradient */}
+                <Box 
+                    bg={"blue.500"}
+                    pt={6}
+                    pb={20}
+                    px={6}
+                >
+                    <VStack space={2}>
+                        <Text fontSize="md" color="blue.100" bold>
+                            Selamat Datang
+                        </Text>
+                        <Text fontSize="3xl" color="white" fontWeight="bold" numberOfLines={1}>
+                            {Home?.name}
+                        </Text>
+                    </VStack>
+                </Box>
+
+                {/* Main Content Cards */}
+                <Box px={6} mt={-16}>
+                    {/* Stats Card */}
+                    <Box 
+                        bg="white" 
+                        rounded="2xl" 
+                        shadow={3}
+                        p={6}
+                        mb={6}
+                    >
+                        <Image
+                            size="lg"
+                            resizeMode="contain"
+                            source={require("../assets/inventory.jpg")}
+                            alt="PLN Logo"
+                            alignSelf="center"
+                            mb={4}
+                            borderWidth={2} 
+                            borderRadius={"full"}
+                        />
+                        
+                        <Heading 
+                            size="lg" 
+                            color="blue.800" 
+                            textAlign="center"
+                            mb={4}
+                        >
+                            Sistem Inventory UID JATIM
+                        </Heading>
+
+                        <Text 
+                            fontSize="sm" 
+                            color="gray.600" 
+                            textAlign="center"
+                            mb={6}
+                        >
+                             Akses data inventaris Anda kapan saja dan di mana saja.
+                        </Text>
+
+                        {/* Quick Stats */}
+                        <HStack justifyContent="space-between" mb={4}>
+                            <Box 
+                                bg="blue.50" 
+                                p={4} 
+                                rounded="xl" 
+                                flex={1} 
+                                mr={2}
+                                alignItems="center"
+                            >
+                                <Icon 
+                                    as={MaterialIcons} 
+                                    name="inventory" 
+                                    size={6} 
+                                    color="blue.500" 
+                                    mb={2}
+                                />
+                                <Text color="blue.800" fontSize="sm" fontWeight="semibold">
+                                    Real-time
+                                </Text>
+                            </Box>
+                            <Box 
+                                bg="blue.50" 
+                                p={4} 
+                                rounded="xl" 
+                                flex={1} 
+                                ml={2}
+                                alignItems="center"
+                            >
+                                <Icon 
+                                    as={MaterialIcons} 
+                                    name="local-shipping" 
+                                    size={6} 
+                                    color="blue.500" 
+                                    mb={2}
+                                />
+                                <Text color="blue.800" fontSize="sm" fontWeight="semibold">
+                                    Transparan
+                                </Text>
+                            </Box>
+                        </HStack>
                     </Box>
 
-                    <Box alignItems="center" mt={5}>
-                        <Image
-                            size="xl"
-                            resizeMode="contain"
-                            source={require("../assets/logo.png")}
-                            alt="PLN Logo"
-                            borderRadius="full"
-                            mb={8}
-                        />
-                        <VStack space={3} alignItems="center">
-                            <Heading size="lg" color="blue.800" textAlign="center">Sistem dan Teknologi Informasi</Heading>
-                            <Text fontSize="md" color="gray.600" px={8} textAlign="justify">
-                                Sistem Inventory UID JATIM siap membantu, mempermudah dan melacak barang dengan mudah dan efisien.
-                                Akses data inventaris Anda kapan saja dan di mana saja.
-                            </Text>
-                            <VStack >
-                            <Button
-                                mt={4}
-                                size="lg"
-                                colorScheme="blue"
-                                leftIcon={<Icon as={MaterialIcons} name="inventory" size="sm" />}
-                                onPress={() => navigation.navigate('Barang')}
-                                _text={{ fontSize: "md", fontWeight: "bold" }}
-                                shadow={3}
-                                borderRadius={20}
-                                px={6}
-                                py={3}
-                            >
-                                Ajukan Permintaan Barang
-                            </Button>
-                            <Button
-                                mt={4}
-                                size="lg"
-                                colorScheme="blue"
-                                leftIcon={<Icon as={MaterialIcons} name="inbox" size="sm" />}
-                                onPress={() => navigation.navigate('Retur')}
-                                _text={{ fontSize: "md", fontWeight: "bold" }}
-                                shadow={3}
-                                borderRadius={20}
-                                px={6}
-                                py={3}
-                            >
-                                Barang Retur
-                            </Button>
-                            </VStack>
-                        </VStack>
-                    </Box>
+                    {/* Action Buttons */}
+                    <VStack space={4} mb={6}>
+                        <Button
+                            size="lg"
+                            bg="blue.600"
+                            _pressed={{ bg: "blue.700" }}
+                            leftIcon={<Icon as={MaterialIcons} name="add-shopping-cart" size="sm" />}
+                            onPress={() => navigation.navigate('Barang')}
+                            py={4}
+                            rounded="xl"
+                            shadow={2}
+                        >
+                            Ajukan Permintaan Barang
+                        </Button>
+                        
+                        <Button
+                            size="lg"
+                            bg="white"
+                            borderWidth={1}
+                            borderColor="blue.600"
+                            _pressed={{ bg: "blue.50" }}
+                            leftIcon={
+                                <Icon 
+                                    as={MaterialIcons} 
+                                    name="inventory" 
+                                    size="sm" 
+                                    color="blue.600" 
+                                />
+                            }
+                            onPress={() => navigation.navigate('Retur')}
+                            _text={{ color: "blue.600" }}
+                            py={4}
+                            rounded="xl"
+                            shadow={1}
+                        >
+                            Barang Retur
+                        </Button>
+                    </VStack>
                 </Box>
-        </>
+            </ScrollView>
+        </Box>
     );
 };
 

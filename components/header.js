@@ -14,18 +14,12 @@ const Header = ({ route, title, withBack = false, }) => {
     return (
         <SafeAreaView>
             <StatusBar barStyle="light" backgroundColor={trueGray900} />
-            <Box bg={"#fff"} p={"4"}>
+            <Box bg={"#fff"} p={"3"} borderBottomWidth={1} borderColor={"gray.300"}>
                 <HStack justifyContent="space-between" alignItems="center">
                     <HStack alignItems="center">
                         {!withBack ? (
                             <>
-                                <Image
-                                    source={require("../assets/inventory.jpg")}
-                                    w="12"
-                                    h="12"
-                                    alt="PLN LOGO"
-                                    mr={"3"}
-                                />
+                               
                             </>
                         ) : (
                             <TouchableOpacity
@@ -41,6 +35,13 @@ const Header = ({ route, title, withBack = false, }) => {
                     </HStack>
                     <HStack position="absolute" right="4">
                     </HStack>
+                     <Image
+                                    source={require("../assets/pln.png")}
+                                    w="10"
+                                    h="12"
+                                    alt="PLN LOGO"
+                                    mr={"3"}
+                                />
                 </HStack>
             </Box>
         </SafeAreaView>

@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView } from "react-native";
-import { Box, Button, Text, VStack, HStack, Center, Icon, Badge } from "native-base";
+import { ScrollView, RefreshControl } from "react-native";
+import {
+  Box,
+  Button,
+  Text,
+  VStack,
+  HStack,
+  Center,
+  Icon,
+  Badge,
+  Pressable,
+  useToast,
+  Skeleton,
+  Divider,
+} from "native-base";
 import { getDatabase, ref, onValue } from "firebase/database";
 import Header from "../components/header";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -12,6 +25,8 @@ const Retur = ({ navigation }) => {
   const [returData, setReturData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
+  const [refreshing, setRefreshing] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     getUserData();
@@ -44,121 +59,196 @@ const Retur = ({ navigation }) => {
   const getUserData = async () => {
     try {
       const userData = await getData("user");
-
       if (userData) {
         const userRef = FIREBASE.database().ref(`users/${userData.uid}`);
         const snapshot = await userRef.once("value");
         const updatedUserData = snapshot.val();
-
         if (updatedUserData) {
           setUser(updatedUserData);
-        } else {
-          console.log("User data not found");
         }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
+      toast.show({
+        title: "Error",
+        description: "Gagal memuat data pengguna",
+        status: "error"
+      });
     }
   };
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    getUserData().finally(() => setRefreshing(false));
+  }, []);
+
   const toggleExpand = (id) => {
-    setExpanded((prevState) => ({
-      ...prevState,
-      [id]: !prevState[id],
+    setExpanded((prev) => ({
+      ...prev,
+      [id]: !prev[id],
     }));
   };
 
-  return (
-    <>
-      <Header title={"Retur Barang"} withBack="true"/>
-      <ScrollView contentContainerStyle={{ padding: 15, backgroundColor: "#F4F4F4" }}>
-        <Box
-          flexDirection="row"
-          justifyContent="space-between"
-          alignItems="center"
-          padding={4}
-          backgroundColor="#004aad"
-          borderRadius="lg"
-          mb={4}
-        >
-          <Text fontSize="xl" color="white">Data Retur Barang</Text>
-        </Box>
-        <VStack space={4} width="100%">
-          {loading ? (
-            <Center>
-              <Text>Loading...</Text>
-            </Center>
-          ) : returData.length > 0 ? (
-            returData.map((item) => (
-              <Box key={item.id} padding={4} borderRadius="lg" backgroundColor="white" shadow={2} mb={4}>
-                <VStack space={2}>
-                <HStack
-                    justifyContent="space-between"
-                    alignItems="center"
-                    px={4}
-                    py={2}
-                    borderBottomWidth={1}
-                    borderColor="gray.200"
-                    rounded="md"
-                  >
-                    <HStack alignItems="center" ml={-4}>
-                      <Text fontWeight="bold" fontSize="lg" color="gray.700" mr={2}>
-                        Status Retur:
+  const StatusBadge = ({ status }) => (
+    <Badge
+      colorScheme={status === "Accepted" ? "success" : "warning"}
+      variant="subtle"
+      rounded="full"
+      px={3}
+      py={1}
+      _text={{
+        fontSize: "xs",
+        fontWeight: "bold",
+      }}
+    >
+      {status === "Accepted" ? "Diterima" : "Pending"}
+    </Badge>
+  );
+
+  const ReturCard = ({ item }) => (
+    <Pressable onPress={() => toggleExpand(item.id)}>
+      <Box
+        bg="white"
+        rounded="2xl"
+        shadow="md"
+        mb={4}
+        borderWidth={1}
+        borderColor="gray.400"
+        overflow="hidden"
+        _pressed={{ bg: "gray.50" }}
+      >
+        <Box p={4}>
+          <HStack justifyContent="space-between" alignItems="center" mb={3}>
+            <VStack space={1}>
+              <Text fontSize="lg" fontWeight="bold" color="gray.800">
+                {item.nama_barang}
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                {item.Pihak_Pemohon}
+              </Text>
+            </VStack>
+            <StatusBadge status={item.status} />
+          </HStack>
+
+          <HStack space={6} mb={expanded[item.id] ? 4 : 0}>
+            <HStack space={2} alignItems="center">
+              <Icon as={MaterialIcons} name="event" size="sm" color="gray.500" />
+              <Text fontSize="sm" color="gray.600">
+                {item.Tanggal_Retur || "Tidak Ada"}
+              </Text>
+            </HStack>
+            <HStack space={2} alignItems="center">
+              <Icon as={MaterialIcons} name="inventory" size="sm" color="gray.500" />
+              <Text fontSize="sm" color="gray.600">
+                {item.jumlah_barang} Unit
+              </Text>
+            </HStack>
+          </HStack>
+
+          {expanded[item.id] && (
+            <VStack space={4} mt={4}>
+              <Divider />
+              
+              <VStack space={3}>
+                <Text fontSize="md" fontWeight="semibold" color="gray.700">
+                  Detail Barang
+                </Text>
+                <Box
+                  bg="gray.50"
+                  p={4}
+                  rounded="lg"
+                  borderWidth={1}
+                  borderColor="gray.200"
+                >
+                  <VStack space={3}>
+                    <HStack justifyContent="space-between" alignItems="center">
+                      <Text fontSize="md" fontWeight="semibold" color="gray.800">
+                        {item.nama_barang}
                       </Text>
-                      <Badge
-                        colorScheme={item.status === 'Accepted' ? "green" : "red"}
-                        variant="solid"
-                      >
-                        {item.status}
+                      <Badge colorScheme="blue" variant="subtle">
+                        {item.kode_barang}
                       </Badge>
                     </HStack>
+                    
+                    <HStack space={4}>
+                      <VStack>
+                        <Text fontSize="xs" color="gray.500">Kategori</Text>
+                        <Text fontSize="sm" color="gray.700">{item.kategori_barang}</Text>
+                      </VStack>
+                      {item.status === "Accepted" && (
+                        <VStack>
+                          <Text fontSize="xs" color="gray.500">Jumlah Disetujui</Text>
+                          <Text fontSize="sm" color="gray.700">{item.jumlah_barang_diretur || "0"}</Text>
+                        </VStack>
+                      )}
+                    </HStack>
 
-                    <Button
-                      variant="ghost"
-                      onPress={() => toggleExpand(item.id)}
-                      _text={{ color: "#004aad", fontSize: "md" }}
-                      leftIcon={
-                        <Icon
-                          as={MaterialIcons}
-                          name={expanded[item.id] ? "expand-less" : "expand-more"}
-                          size="lg"
-                          color="#004aad"
-                        />
-                      }
-                      size="sm"
-                      _hover={{ bg: "gray.100" }}
-                    />
-                  </HStack>
-
-                  {item.status === 'Accepted' && (
-                    <>
-                      <Text mt={2}>Jumlah Yang Disetujui: {item.jumlah_barang_diretur|| "Tidak ada catatan"}</Text>
-                    </>
-                  )}
-
-                  <Text>Pihak Pemohon: {item.Pihak_Pemohon}</Text>
-                  <Text>Tanggal Retur: {item.Tanggal_Retur}</Text>
-                  <Text>Jumlah Barang: {item.jumlah_barang}</Text>
-                  <Text>Catatan: {item.Deskripsi || "Tidak ada catatan"}</Text>
-
-                  {expanded[item.id] && (
-                    <VStack space={2} mt={2} pl={4} borderLeftWidth={2} borderLeftColor="#004aad">
-                      <Text fontWeight="bold">Detail Barang:</Text>
-                      <Text>Nama Barang: {item.nama_barang}</Text>
-                      <Text>Kode Barang: {item.kode_barang}</Text>
-                      <Text>Kategori Barang: {item.kategori_barang}</Text>
-                    </VStack>
-                  )}
-                </VStack>
-              </Box>
-            ))
-          ) : (
-            <Center>
-              <Text>No return items found</Text>
-            </Center>
+                    <Box bg="gray.100" p={3} rounded="md">
+                      <Text fontSize="xs" color="gray.500">Catatan</Text>
+                      <Text fontSize="sm" color="gray.700">
+                        {item.Deskripsi || "Tidak ada catatan"}
+                      </Text>
+                    </Box>
+                  </VStack>
+                </Box>
+              </VStack>
+            </VStack>
           )}
-        </VStack>
-      </ScrollView>
+        </Box>
+      </Box>
+    </Pressable>
+  );
+
+  const LoadingSkeleton = () => (
+    <VStack space={4} p={4}>
+      {[1, 2, 3].map((item) => (
+        <Box key={item} bg="white" rounded="xl" overflow="hidden" p={4}>
+          <Skeleton.Text px={4} />
+          <Skeleton h={6} rounded="full" mt={4} />
+          <Skeleton.Text px={4} mt={4} />
+        </Box>
+      ))}
+    </VStack>
+  );
+
+  return (
+    <>
+      <Header title="UID Jawa Timur" withBack={true} />
+      <Box flex={1} bg="gray.100">
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          <Box bg="blue.600" p={4}>
+            <HStack justifyContent="space-between" alignItems="center">
+              <VStack space={1}>
+                <Text fontSize="2xl" color="white" fontWeight="bold">
+                  Retur Barang
+                </Text>
+                <Text fontSize="sm" color="white" opacity={0.9}>
+                  Sistem Manajemen Inventaris
+                </Text>
+              </VStack>
+            </HStack>
+          </Box>
+
+          <Box p={4}>
+            {loading ? (
+              <LoadingSkeleton />
+            ) : returData.length > 0 ? (
+              returData.map((item) => <ReturCard key={item.id} item={item} />)
+            ) : (
+              <Center py={12}>
+                <Icon as={MaterialIcons} name="inventory" size="4xl" color="gray.300" />
+                <Text fontSize="lg" color="gray.500" mt={4}>
+                  Tidak ada data retur barang
+                </Text>
+              </Center>
+            )}
+          </Box>
+        </ScrollView>
+      </Box>
     </>
   );
 };

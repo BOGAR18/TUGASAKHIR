@@ -1,41 +1,69 @@
 import { Alert } from "react-native";
 import FIREBASE from "./config/FIREBASE";
-import { getData, clearStorage, storeData } from "../utils";
+import { clearStorage, getData, storeData } from "../utils";
 
-export const registerUser = async (data, password) => {
+// Fungsi menyimpan log aktivitas
+const saveLog = async (name, type, status) => {
   try {
-    const success = await FIREBASE.auth().createUserWithEmailAndPassword(data.email, password);
-
-    const dataBaru = {
-      ...data,
-      uid: success.user.uid,
-    };
-
-    await FIREBASE.database()
-      .ref("users/" + success.user.uid)
-      .set(dataBaru);
-
-    storeData("user", dataBaru); // Local storage
-    return dataBaru;
+    const timestamp = Date.now();
+    await FIREBASE.database().ref(`logs/${timestamp}`).set({
+      name,
+      type, // "login" atau "logout"
+      status, // admin, pegawai, atau user
+      timestamp: new Date().toISOString(),
+    });
+    console.log(`Log ${type} berhasil disimpan untuk ${name}`);
   } catch (error) {
-    throw error;
+    console.error("Gagal menyimpan log:", error);
   }
 };
 
+// Fungsi logout dengan acuan logika login
+export const logoutUser = async (navigation) => {
+  try {
+    const userData = await getData("user"); // Mengambil data pengguna yang login
+    if (userData) {
+      console.log("Sedang logout user:", userData.email);
 
+      // Simpan log logout
+      await saveLog(userData.name, "logout", userData.status);
+
+      // Logout dari Firebase
+      await FIREBASE.auth().signOut();
+      console.log("User berhasil logout dari Firebase");
+
+      // Hapus data lokal
+      await clearStorage();
+
+      // Arahkan ke halaman login
+      navigation.replace("Login");
+    } else {
+      console.log("Tidak ada pengguna yang sedang login.");
+      navigation.replace("Login");
+    }
+  } catch (error) {
+    console.error("Error saat logout:", error);
+    alert("Error saat logout: " + error.message);
+  }
+};
+
+// Fungsi login
 export const loginUser = async (email, password) => {
   try {
     const success = await FIREBASE.auth().signInWithEmailAndPassword(email, password);
-    
-    // Retrieve user data from the database
-    const userRef = FIREBASE.database().ref(`/users/${success.user.uid}`);
+    const uid = success.user.uid;
+
+    // Ambil data user dari Firebase
+    const userRef = FIREBASE.database().ref(`/users/${uid}`);
     const userSnapshot = await userRef.once("value");
     const userData = userSnapshot.val();
 
     if (userData) {
-      // Local storage (Async Storage)
       await storeData("user", userData);
-      
+
+      // Simpan log aktivitas login
+      await saveLog(userData.name, "login", userData.status);
+
       return userData;
     } else {
       throw new Error("User data not found");
@@ -46,20 +74,26 @@ export const loginUser = async (email, password) => {
 };
 
 
-export const logoutUser = () => {
-  FIREBASE.auth()
-    .signOut()
-    .then(() => {
-      // Sign-out successful.
-      clearStorage();
-    })
-    .catch((error) => {
-      // An error happened.
-      Alert.alert("Error", error.message);
-    });
+export const registerUser = async (data, password) => {
+  try {
+    const success = await FIREBASE.auth().createUserWithEmailAndPassword(
+      data.email,
+      password
+    );
+    const dataBaru = { ...data, uid: success.user.uid };
+
+    // Simpan hanya ke database, TANPA mengubah sesi user yang sedang login
+    await FIREBASE.database().ref("users/" + success.user.uid).set(dataBaru);
+
+    return dataBaru;
+  } catch (error) {
+    Alert.alert("Registration Error", error.message);
+    throw error;
+  }
 };
 
 
+// Update Data User
 export const updateUserData = async (uid, updatedData) => {
   try {
     const userRef = FIREBASE.database().ref(`users/${uid}`);
@@ -67,101 +101,35 @@ export const updateUserData = async (uid, updatedData) => {
     const existingUserData = snapshot.val();
 
     if (existingUserData) {
-      const updatedUser = {
-        ...existingUserData,
-        ...updatedData,
-      };
-
+      const updatedUser = { ...existingUserData, ...updatedData };
       await userRef.update(updatedUser);
       console.log("User data updated successfully");
+      return updatedUser;
     } else {
-      console.log("User data not found");
+      throw new Error("User data not found");
     }
   } catch (error) {
+    Alert.alert("Update Error", error.message);
     throw error;
   }
 };
 
-export const getBarang_KeluarData = () => {
-  const obatRef = FIREBASE.database().ref("BarangKeluar");
+// Ambil Data Barang Keluar
+export const getBarang_KeluarData = async () => {
+  try {
+    const barangRef = FIREBASE.database().ref("BarangKeluar");
+    const snapshot = await barangRef.once("value");
+    const data = snapshot.val();
 
-  obatRef.once("value")
-    .then((snapshot) => {
-      // The data is available in snapshot.val()
-      const data = snapshot.val();
+    if (data) {
       console.log("Data retrieved successfully:", data);
-      // You can update your React component state with the retrieved data here
-    })
-    .catch((error) => {
-      console.error("Error retrieving data: ", error);
-    });
+      return data;
+    } else {
+      console.log("No data available");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error retrieving data: ", error);
+    throw error;
+  }
 };
-
-
-
-
-// export const getObatData = () => {
-//   const obatRef = FIREBASE.database().ref("obat");
-
-//   obatRef.once("value")
-//     .then((snapshot) => {
-//       // The data is available in snapshot.val()
-//       const data = snapshot.val();
-//       console.log("Data retrieved successfully:", data);
-//       // You can update your React component state with the retrieved data here
-//     })
-//     .catch((error) => {
-//       console.error("Error retrieving data: ", error);
-//     });
-// };
-
-
-
-
-// export const getHospital = async () => {
-//   const hospitalRef = FIREBASE.database().ref("hospitals");
-
-//   return hospitalRef
-//     .once("value")
-//     .then((snapshot) => {
-//       const hospitalsData = snapshot.val();
-//       if (hospitalsData) {
-//         const hospitalsArray = Object.entries(hospitalsData).map(([hospitalId, hospitalData]) => ({
-//           hospitalId,
-//           ...hospitalData,
-//         }));
-//         return hospitalsArray;
-//       } else {
-//         return [];
-//       }
-//     })
-//     .catch((error) => {
-//       console.error("Error fetching hospitals data:", error);
-//       return [];
-//     });
-// };
-
-// export const editHospital = async (hospitalId, updatedData) => {
-//   try {
-//     await FIREBASE.database()
-//       .ref(`hospitals/${hospitalId}`)
-//       .update(updatedData);
-
-//     console.log("Hospital updated successfully");
-//   } catch (error) {
-//     throw error;
-//   }
-// };
-
-// export const deleteHospital = async (hospitalId) => {
-//   try {
-//     await FIREBASE.database()
-//       .ref(`hospitals/${hospitalId}`)
-//       .remove();
-
-//     console.log("Hospital deleted successfully");
-//   } catch (error) {
-//     throw error;
-//   }
-// };
-

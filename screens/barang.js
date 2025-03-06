@@ -1,24 +1,39 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, Linking } from 'react-native';
-import { Box, Button, Text, VStack, HStack, Center, Divider, Icon, Badge } from 'native-base';
+import { ScrollView, Linking, RefreshControl } from 'react-native';
+import { 
+  Box, 
+  Button, 
+  Text, 
+  VStack, 
+  HStack, 
+  Center, 
+  Divider, 
+  Icon, 
+  Badge, 
+  Pressable,
+  useToast,
+  Skeleton,
+} from 'native-base';
 import { getDatabase, ref, onValue } from "firebase/database";
 import Header from "../components/header";
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import FIREBASE from "../actions/config/FIREBASE";
 import { getData } from "../utils";
 
 const Barang = ({ navigation }) => {
-  const [user, setUser] = useState(null); // Store user information
+  const [user, setUser] = useState(null);
   const [barangData, setBarangData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState({}); // To track which item is expanded
+  const [expanded, setExpanded] = useState({});
+  const [refreshing, setRefreshing] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     getUserData();
   }, []);
 
   useEffect(() => {
-    if (!user) return; // Do nothing if user is not set yet
+    if (!user) return;
 
     const database = getDatabase();
     const BarangKeluarRef = ref(database, "Barang_Keluar");
@@ -31,19 +46,13 @@ const Barang = ({ navigation }) => {
             id: key,
             ...value,
           }))
-          .filter(item => item.userId === user.uid) // Filter by user UID
-          .map(item => {
-            // Tambahkan properti File_BeritaAcara dan Notes jika statusnya 'Accepted'
-            if (item.status === 'Accepted') {
-              if (!item.File_BeritaAcara) {
-                item.File_BeritaAcara = 'URL_TO_PDF'; // Gantilah dengan URL PDF yang benar
-              }
-              if (!item.Catatan) {
-                item.Catatan = 'Catatan terkait barang ini'; // Gantilah dengan catatan yang sesuai
-              }
-            }
-            return item;
-          });
+          .filter(item => item.userId === user.uid)
+          .map(item => ({
+            ...item,
+            File_BeritaAcara: item.status === 'Accepted' ? (item.File_BeritaAcara || 'URL_TO_PDF') : null,
+            Catatan: item.status === 'Accepted' ? (item.Catatan || 'Catatan terkait barang ini') : null
+          }))
+          .sort((a, b) => new Date(b.tanggal_peminjamanbarang) - new Date(a.tanggal_peminjamanbarang));
 
         setBarangData(BarangArray);
       }
@@ -56,149 +65,179 @@ const Barang = ({ navigation }) => {
   const getUserData = async () => {
     try {
       const userData = await getData("user");
-
       if (userData) {
         const userRef = FIREBASE.database().ref(`users/${userData.uid}`);
         const snapshot = await userRef.once("value");
         const updatedUserData = snapshot.val();
-
         if (updatedUserData) {
-          setUser(updatedUserData); // Store the entire user data including uid
-        } else {
-          console.log("User data not found");
+          setUser(updatedUserData);
         }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
+      toast.show({
+        title: "Error",
+        description: "Gagal memuat data pengguna",
+        status: "error"
+      });
     }
   };
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    getUserData().finally(() => setRefreshing(false));
+  }, []);
+
   const toggleExpand = (id) => {
-    setExpanded((prevState) => ({
-      ...prevState,
-      [id]: !prevState[id],
+    setExpanded(prev => ({
+      ...prev,
+      [id]: !prev[id]
     }));
   };
 
   const handleViewPDF = (url) => {
-    Linking.openURL(url).catch((err) => console.error('An error occurred', err));
+    Linking.openURL(url).catch((err) => {
+      toast.show({
+        title: "Error",
+        description: "Gagal membuka file PDF",
+        status: "error"
+      });
+    });
   };
 
-  return (
-    <>
-      <Header title={"Inventory UID JATIM"} />
-      <ScrollView>
-      <Box padding={15} 
-      backgroundColor={"gray.100"}>
-        <Box
-          flexDirection="row"
-          justifyContent="space-between"
-          alignItems="center"
-          padding={4}
-          backgroundColor="#004aad"
-          borderRadius="lg"
-          mb={4}
-          shadow={2}
-        >
-          <Text fontSize="xl" color="white" fontWeight="bold">Data Barang Keluar</Text>
-          <Button
-            onPress={() => navigation.navigate('CreateBarang')}
-            backgroundColor="white"
-            _text={{ color: "#004aad", fontWeight: "bold" }}
-            leftIcon={<Icon as={MaterialIcons} name="add" size="sm" color="#004aad" />}
-          >
-            Ajukan Barang
-          </Button>
-        </Box>
-        <Divider mt={-3} mb={5} backgroundColor="#004aad" />
-        <VStack space={4} width="100%" >
-          {loading ? (
-            <Center>
-              <Text>Loading...</Text>
-            </Center>
-          ) : barangData.length > 0 ? (
-            barangData.map(item => (
-              <Box key={item.id} padding={4} borderRadius="lg" backgroundColor="white" shadow={2} mb={4}>
-                <VStack space={2}>
-                  <HStack
-                    justifyContent="space-between"
-                    alignItems="center"
-                    px={4}
-                    py={2}
-                    borderBottomWidth={1}
-                    borderColor="gray.200"
-                    rounded="md"
-                  >
-                    <HStack alignItems="center" ml={-4}>
-                      <Text fontWeight="bold" fontSize="lg" color="gray.700" mr={2}>
-                        {item.Kategori_Peminjaman}
-                      </Text>
-                      <Badge
-                        colorScheme={item.status === 'Accepted' ? "green" : "red"}
-                        variant="solid"
-                      >
-                        {item.status}
-                      </Badge>
-                    </HStack>
+  const StatusBadge = ({ status }) => (
+    <Badge
+      colorScheme={status === 'Accepted' ? "success" : "yellow"}
+      variant="subtle"
+      rounded="full"
+      px={3}
+      py={1}
+      _text={{
+        fontSize: "xs",
+        fontWeight: "bold",
+      }}
+    >
+      {status === 'Accepted' ? 'Diterima' : 'Pending'}
+    </Badge>
+  );
 
+  const BarangCard = ({ item }) => (
+    <Pressable onPress={() => toggleExpand(item.id)}>
+      <Box
+        bg="white"
+        rounded="2xl"
+        shadow="md"
+        mb={4}
+        borderWidth={1}
+        borderColor="gray.400"
+        overflow="hidden"
+        _pressed={{ bg: "gray.50" }}
+      >
+        <Box p={4}>
+          <HStack justifyContent="space-between" alignItems="center" mb={3}>
+            <VStack space={1}>
+              <Text fontSize="lg" fontWeight="bold" color="gray.800">
+                {item.Kategori_Peminjaman}
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                {item.Nama_PihakPeminjam}
+              </Text>
+            </VStack>
+            <StatusBadge status={item.status} />
+          </HStack>
+
+          <HStack space={6} mb={expanded[item.id] ? 4 : 0}>
+            <HStack space={2} alignItems="center">
+              <Icon as={MaterialIcons} name="event" size="sm" color="gray.500" />
+              <Text fontSize="sm" color="gray.600">
+                {item.tanggal_peminjamanbarang || "Tidak Ada"}
+              </Text>
+            </HStack>
+            <HStack space={2} alignItems="center">
+              <Icon as={MaterialIcons} name="inventory" size="sm" color="gray.500" />
+              <Text fontSize="sm" color="gray.600">
+                {item.barang ? `${item.barang.length} Barang` : "0 Barang"}
+              </Text>
+            </HStack>
+          </HStack>
+
+          {expanded[item.id] && (
+            <VStack space={4} mt={4}>
+              <Divider />
+              
+              {item.status === 'Accepted' && (
+                <VStack space={4}>
+                  <Text fontSize="md" fontWeight="semibold" color="gray.700">
+                    File Berita Acara
+                  </Text>
+                  {item.File_BeritaAcara ? (
                     <Button
-                      variant="ghost"
-                      onPress={() => toggleExpand(item.id)}
-                      _text={{ color: "#004aad", fontSize: "md" }}
-                      leftIcon={
-                        <Icon
-                          as={MaterialIcons}
-                          name={expanded[item.id] ? "expand-less" : "expand-more"}
-                          size="lg"
-                          color="#004aad"
-                        />
-                      }
                       size="sm"
-                      _hover={{ bg: "gray.100" }}
-                    />
-                  </HStack>
-
-
-                  {item.status === 'Accepted' && (
-                    <>
-                      <Text>File Berita Acara:</Text>
-                      {item.File_BeritaAcara ? (
-                        <Button
-                          mt={2}
-                          backgroundColor="#004aad"
-                          _text={{ color: "white" }}
-                          onPress={() => handleViewPDF(item.File_BeritaAcara)}
-                          leftIcon={<Icon as={MaterialIcons} name="picture-as-pdf" size="sm" color="white" />}
-                        >
-                          Lihat File
-                        </Button>
-                      ) : (
-                        <Text>Tidak ada File Berita Acara</Text>
-                      )}
-
-                      <Text mt={2}>Catatan: {item.Catatan || "Tidak ada catatan"}</Text>
-                    </>
+                      colorScheme="blue"
+                      leftIcon={<Icon as={MaterialIcons} name="picture-as-pdf" size="sm" />}
+                      onPress={() => handleViewPDF(item.File_BeritaAcara)}
+                    >
+                      Lihat File
+                    </Button>
+                  ) : (
+                    <Text fontSize="sm" color="gray.500">
+                      Tidak ada File Berita Acara
+                    </Text>
                   )}
+                  
+                  <Box bg="gray.50" p={3} rounded="lg">
+                    <Text fontSize="md" fontWeight="semibold" color="gray.700" mb={1}>
+                      Catatan
+                    </Text>
+                    <Text fontSize="sm" color="gray.600">
+                      {item.Catatan || "Tidak ada catatan"}
+                    </Text>
+                  </Box>
+                </VStack>
+              )}
 
-                  <Text>Pihak Peminjam: {item.Nama_PihakPeminjam}</Text>
-                  <Text>Tanggal Pengajuan: {item.tanggal_peminjamanbarang || "Tidak Ada"}</Text>
-                  <Text>Total Barang: {item.barang ? item.barang.length : 0}</Text>
+              <VStack space={3}>
+                <Text fontSize="md" fontWeight="semibold" color="gray.700">
+                  Daftar Barang
+                </Text>
+                {item.barang ? (
+                  item.barang.map((barang, index) => (
+                    <Box
+                      key={index}
+                      bg="gray.50"
+                      p={4}
+                      rounded="lg"
+                      borderWidth={1}
+                      borderColor="gray.200"
+                    >
+                      <VStack space={3}>
+                        <HStack justifyContent="space-between" alignItems="center">
+                          <Text fontSize="md" fontWeight="semibold" color="gray.800">
+                            {barang.nama_barang}
+                          </Text>
+                          <Badge colorScheme="blue" variant="subtle">
+                            {barang.kode_barang}
+                          </Badge>
+                        </HStack>
+                        
+                        <HStack space={4}>
+                          <VStack>
+                            <Text fontSize="xs" color="gray.500">Jumlah</Text>
+                            <Text fontSize="sm" color="gray.700">{barang.jumlah_barang}</Text>
+                          </VStack>
+                          <VStack>
+                            <Text fontSize="xs" color="gray.500">Kategori</Text>
+                            <Text fontSize="sm" color="gray.700">{barang.kategori_barang}</Text>
+                          </VStack>
+                        </HStack>
 
-                  {expanded[item.id] && (
-                    <VStack space={2} mt={2} pl={4} borderLeftWidth={2} borderLeftColor="#004aad">
-                      <Text fontWeight="bold">Daftar Barang:</Text>
-                      {item.barang ? item.barang.map((barang, index) => (
-                        <Box key={index} borderBottomWidth={1} borderBottomColor="coolGray.200" pb={2} mb={2}>
-                          <Text>Kode Barang: {barang.kode_barang}</Text>
-                          <Text>Nama Barang: {barang.nama_barang}</Text>
-                          <Text>Jumlah Barang: {barang.jumlah_barang}</Text>
-                          <Text>Kategori Barang: {barang.kategori_barang}</Text>
-                          {item.status === 'Accepted' && (
-                            <Button
-                              mt={2}
-                              backgroundColor="orange.400"
-                              _text={{ color: "white" }}
-                              onPress={() => navigation.navigate('CreateRetur', {
+                        {item.status === 'Accepted' && (
+                          <Button
+                            size="sm"
+                            colorScheme="orange"
+                            leftIcon={<Icon as={FontAwesome5} name="undo" size="xs" />}
+                            onPress={() =>
+                              navigation.navigate('CreateRetur', {
                                 Pihak_Pemohon: item.Nama_PihakPeminjam,
                                 kode_barang: barang.kode_barang,
                                 kategori_barang: barang.kategori_barang,
@@ -206,28 +245,97 @@ const Barang = ({ navigation }) => {
                                 garansi_barang_awal: barang.garansi_barang_awal,
                                 garansi_barang_akhir: barang.garansi_barang_akhir,
                                 jumlah_barang: barang.jumlah_barang,
-                              })}
-                              leftIcon={<Icon as={FontAwesome5} name="undo" size="sm" color="white" />}
-                            >
-                              Retur Barang
-                            </Button>
-                          )}
-
-                        </Box>
-                      )) : <Text>No items found</Text>}
-                    </VStack>
-                  )}
-                </VStack>
-              </Box>
-            ))
-          ) : (
-            <Center>
-              <Text>No items found</Text>
-            </Center>
+                              })
+                            }
+                          >
+                            Retur Barang
+                          </Button>
+                        )}
+                      </VStack>
+                    </Box>
+                  ))
+                ) : (
+                  <Text fontSize="sm" color="gray.500">
+                    Tidak ada barang
+                  </Text>
+                )}
+              </VStack>
+            </VStack>
           )}
-        </VStack>
+        </Box>
       </Box>
-      </ScrollView>
+    </Pressable>
+  );
+
+  const LoadingSkeleton = () => (
+    <VStack space={4} p={4}>
+      {[1, 2, 3].map((item) => (
+        <Box key={item} bg="white" rounded="xl" overflow="hidden" p={4}>
+          <Skeleton.Text px={4} />
+          <Skeleton h={6} rounded="full" mt={4} />
+          <Skeleton.Text px={4} mt={4} />
+        </Box>
+      ))}
+    </VStack>
+  );
+
+  return (
+    <>
+      <Header title="UID Jawa Timur" />
+      <Box flex={1} bg="gray.100">
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+           <Box
+              bg="blue.600"
+              padding={2}
+            >
+              <HStack justifyContent="space-between" alignItems="center">
+                <VStack space={1}>
+                  <Text fontSize="xl" color="white" fontWeight="bold">
+                    Data Barang
+                  </Text>
+                  <Text fontSize="xs" color="white" opacity={0.9}>
+                    Sistem Manajemen Inventaris
+                  </Text>
+                </VStack>
+                <Button
+                  onPress={() => navigation.navigate('CreateBarang')}
+                  bg="white"
+                  _pressed={{ bg: "gray.100" }}
+                  rounded="full"
+                  leftIcon={
+                    <Icon as={MaterialIcons} name="add" size="sm" color="blue.600" />
+                  }
+                >
+                  <Text>
+                  Ajukan Barang
+                  </Text>
+                </Button>
+              </HStack>
+            </Box>
+          <Box p={4}>
+
+            {/* Content Section */}
+            {loading ? (
+              <LoadingSkeleton />
+            ) : barangData.length > 0 ? (
+              barangData.map(item => (
+                <BarangCard key={item.id} item={item} />
+              ))
+            ) : (
+              <Center py={12}>
+                <Icon as={MaterialIcons} name="inventory" size="4xl" color="gray.300" />
+                <Text fontSize="lg" color="gray.500" mt={4}>
+                  Tidak ada data barang
+                </Text>
+              </Center>
+            )}
+          </Box>
+        </ScrollView>
+      </Box>
     </>
   );
 };

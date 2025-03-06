@@ -1,20 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, ActivityIndicator} from 'react-native';
-import { Box, Button, Text, VStack, Input, FormControl, HStack, Modal, Icon, Card, Divider, Center, useToast, } from 'native-base';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
-import FIREBASE from '../actions/config/FIREBASE';
-import Header from '../components/header';
-import { getData } from '../utils';
+import React, { useState, useEffect } from "react";
+import { ScrollView, ActivityIndicator } from "react-native";
+import {
+  Box,
+  Button,
+  Text,
+  VStack,
+  Input,
+  FormControl,
+  HStack,
+  Modal,
+  Icon,
+  Card,
+  Divider,
+  Center,
+  useToast,
+} from "native-base";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
+import FIREBASE from "../actions/config/FIREBASE";
+import Header from "../components/header";
+import { getData } from "../utils";
 
 const CreateRetur = ({ route, navigation }) => {
-  const { Pihak_Pemohon, kode_barang, kategori_barang, nama_barang, garansi_barang_awal, garansi_barang_akhir, jumlah_barang } = route.params;
+  const {
+    Pihak_Pemohon,
+    kode_barang,
+    kategori_barang,
+    nama_barang,
+    garansi_barang_awal,
+    garansi_barang_akhir,
+    jumlah_barang,
+  } = route.params;
 
-  const [jumlahBarang, setJumlahBarang] = useState('');
-  const [deskripsi, setDeskripsi] = useState('');
-  const [tanggalRetur, setTanggalRetur] = useState('');
-  const [formError, setFormError] = useState('');
+  const [jumlahBarang, setJumlahBarang] = useState("");
+  const [deskripsi, setDeskripsi] = useState("");
+  const [tanggalRetur, setTanggalRetur] = useState("");
+  const [formError, setFormError] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [fileSurat, setFileSurat] = useState(null);
@@ -31,8 +53,8 @@ const CreateRetur = ({ route, navigation }) => {
 
   const requestPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setFormError('Sorry, we need camera roll permissions to make this work!');
+    if (status !== "granted") {
+      setFormError("Sorry, we need camera roll permissions to make this work!");
       setModalVisible(true);
     }
   };
@@ -62,18 +84,18 @@ const CreateRetur = ({ route, navigation }) => {
   const pickDocument = async () => {
     try {
       let result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
+        type: "application/pdf",
       });
 
       if (result && !result.canceled) {
         const selectedFile = result.assets ? result.assets[0] : result;
         setFileSurat(selectedFile);
       } else {
-        setFormError('Tidak ada file yang dipilih.');
+        setFormError("Tidak ada file yang dipilih.");
         setModalVisible(true);
       }
     } catch (error) {
-      setFormError('Terjadi kesalahan saat memilih file.');
+      setFormError("Terjadi kesalahan saat memilih file.");
       setModalVisible(true);
     }
   };
@@ -86,16 +108,18 @@ const CreateRetur = ({ route, navigation }) => {
         aspect: [4, 3],
         quality: 1,
       });
-  
+
       if (!result.canceled) {
-        const selectedImageUri = result.assets ? result.assets[0].uri : result.uri;
+        const selectedImageUri = result.assets
+          ? result.assets[0].uri
+          : result.uri;
         setImage(selectedImageUri);
       } else {
-        setFormError('Tidak ada gambar yang dipilih.');
+        setFormError("Tidak ada gambar yang dipilih.");
         setModalVisible(true);
       }
     } catch (error) {
-      setFormError('Terjadi kesalahan saat memilih gambar.');
+      setFormError("Terjadi kesalahan saat memilih gambar.");
       setModalVisible(true);
     }
   };
@@ -108,37 +132,45 @@ const CreateRetur = ({ route, navigation }) => {
       await ref.put(blob);
       return await ref.getDownloadURL();
     } catch (error) {
-      setFormError('Failed to upload file');
+      setFormError("Failed to upload file");
       setModalVisible(true);
-      throw new Error('Failed to upload file');
+      throw new Error("Failed to upload file");
     }
   };
 
   const addRetur_Barang = async () => {
     const jumlahBarangInt = parseInt(jumlahBarang);
     const jumlahBarangTersediaInt = parseInt(jumlah_barang);
-  
+
     if (!jumlahBarang || !deskripsi || !tanggalRetur || !fileSurat || !image) {
-      setFormError('Semua field wajib diisi.');
+      setFormError("Semua field wajib diisi.");
       setModalVisible(true);
       return;
     }
-  
+
     if (jumlahBarangInt > jumlahBarangTersediaInt) {
-      setFormError(`Jumlah barang retur tidak boleh melebihi jumlah barang yang tersedia (${jumlahBarangTersediaInt}).`);
+      setFormError(
+        `Jumlah barang retur tidak boleh melebihi jumlah barang yang tersedia (${jumlahBarangTersediaInt}).`
+      );
       setModalVisible(true);
       return;
     }
 
     setIsSaving(true); // Set loading state ketika proses penyimpanan dimulai
-  
+
     try {
-      const returRef = FIREBASE.database().ref('Retur_Barang').push();
+      const returRef = FIREBASE.database().ref("Retur_Barang").push();
       const retur_id = returRef.key;
-  
-      const fileSuratUrl = await uploadFile(fileSurat.uri, `Retur_Barang/${retur_id}/SuratJalan.pdf`);
-      const imageUrl = await uploadFile(image, `Retur_Barang/${retur_id}/Image.jpg`);
-  
+
+      const fileSuratUrl = await uploadFile(
+        fileSurat.uri,
+        `Retur_Barang/${retur_id}/SuratJalan.pdf`
+      );
+      const imageUrl = await uploadFile(
+        image,
+        `Retur_Barang/${retur_id}/Image.jpg`
+      );
+
       const data = {
         id: retur_id,
         userId: user.uid,
@@ -147,45 +179,50 @@ const CreateRetur = ({ route, navigation }) => {
         kategori_barang: kategori_barang,
         garansi_barang_awal: garansi_barang_awal,
         garansi_barang_akhir: garansi_barang_akhir,
-        Kategori_Retur: '',
+        Kategori_Retur: "",
         nama_barang: nama_barang,
         Tanggal_Retur: tanggalRetur,
         jumlah_barang: jumlahBarangInt,
         Deskripsi: deskripsi,
         Surat_Retur: fileSuratUrl,
         Gambar_Retur: imageUrl,
-        status: 'Pending',
+        status: "Pending",
       };
-  
+
       await returRef.set(data);
-  
-      const barangKeluarRef = FIREBASE.database().ref('Barang_Keluar');
-      const snapshot = await barangKeluarRef.once('value');
+
+      const barangKeluarRef = FIREBASE.database().ref("Barang_Keluar");
+      const snapshot = await barangKeluarRef.once("value");
       const barangKeluarData = snapshot.val();
-  
+
       Object.entries(barangKeluarData).forEach(async ([key, value]) => {
-        const barangInKeluar = value.barang.find(b => b.kode_barang === kode_barang);
+        const barangInKeluar = value.barang.find(
+          (b) => b.kode_barang === kode_barang
+        );
         if (barangInKeluar) {
-          const newJumlahBarang = Number(barangInKeluar.jumlah_barang) - Number(jumlahBarang);
+          const newJumlahBarang =
+            Number(barangInKeluar.jumlah_barang) - Number(jumlahBarang);
           if (newJumlahBarang < 0) {
-            setFormError('Jumlah retur melebihi jumlah barang keluar.');
+            setFormError("Jumlah retur melebihi jumlah barang keluar.");
             setModalVisible(true);
             return;
           }
-  
-          const updatedBarang = value.barang.map(b =>
-            b.kode_barang === kode_barang ? { ...b, jumlah_barang: newJumlahBarang.toString() } : b
+
+          const updatedBarang = value.barang.map((b) =>
+            b.kode_barang === kode_barang
+              ? { ...b, jumlah_barang: newJumlahBarang.toString() }
+              : b
           );
-  
+
           await FIREBASE.database().ref(`Barang_Keluar/${key}`).update({
             barang: updatedBarang,
           });
         }
       });
-  
+
       setSuccessModalVisible(true);
     } catch (error) {
-      setFormError('Terjadi kesalahan saat menyimpan data.');
+      setFormError("Terjadi kesalahan saat menyimpan data.");
       setModalVisible(true);
     }
   };
@@ -198,11 +235,15 @@ const CreateRetur = ({ route, navigation }) => {
   return (
     <>
       <Header title={"Retur Barang"} withBack={true} />
-      <ScrollView contentContainerStyle={{ padding: 15, backgroundColor: '#f7f8fc' }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 15, backgroundColor: "#f7f8fc" }}
+      >
         <VStack space={5} width="100%">
           <Card borderRadius="lg" shadow={2}>
             <Box p={4}>
-              <Text fontSize="lg" fontWeight="bold" mb={4}>Detail Barang</Text>
+              <Text fontSize="lg" fontWeight="bold" mb={4}>
+                Detail Barang
+              </Text>
               <Divider my={2} />
               <VStack space={4}>
                 <FormControl>
@@ -246,13 +287,15 @@ const CreateRetur = ({ route, navigation }) => {
                 </FormControl>
 
                 <FormControl>
-                  <FormControl.Label>Jumlah Barang (Tersedia: {jumlah_barang})</FormControl.Label>
+                  <FormControl.Label>
+                    Jumlah Barang (Tersedia: {jumlah_barang})
+                  </FormControl.Label>
                   <Input
                     type="number"
                     value={jumlahBarang}
                     onChangeText={setJumlahBarang}
                     borderRadius="md"
-                    keyboardType='numeric'
+                    keyboardType="numeric"
                   />
                 </FormControl>
 
@@ -266,38 +309,56 @@ const CreateRetur = ({ route, navigation }) => {
                 </FormControl>
 
                 <FormControl>
-                  <FormControl.Label>Upload Surat Jalan (PDF)</FormControl.Label>
-                  <Button 
-                    leftIcon={<Icon as={Ionicons} name="document-attach-outline" size="sm" />} 
+                  <FormControl.Label>
+                    Upload Surat Jalan (PDF)
+                  </FormControl.Label>
+                  <Button
+                    leftIcon={
+                      <Icon
+                        as={Ionicons}
+                        name="document-attach-outline"
+                        size="sm"
+                      />
+                    }
                     onPress={pickDocument}
                     borderRadius="md"
                     colorScheme="primary"
                     variant="outline"
-                    >
+                  >
                     Pilih File PDF
                   </Button>
                   {fileSurat ? (
-                    <Text mt={2} color="green.500">File terpilih: {fileSurat.name}</Text>
+                    <Text mt={2} color="green.500">
+                      File terpilih: {fileSurat.name}
+                    </Text>
                   ) : (
-                    <Text mt={2} color="red.500">Belum ada file yang dipilih</Text>
+                    <Text mt={2} color="red.500">
+                      Belum ada file yang dipilih
+                    </Text>
                   )}
                 </FormControl>
 
                 <FormControl>
                   <FormControl.Label>Upload Gambar</FormControl.Label>
-                  <Button 
-                    leftIcon={<Icon as={Ionicons} name="image-outline" size="sm" />} 
+                  <Button
+                    leftIcon={
+                      <Icon as={Ionicons} name="image-outline" size="sm" />
+                    }
                     onPress={pickImage}
                     borderRadius="md"
                     colorScheme="primary"
                     variant="outline"
-                    >
+                  >
                     Pilih Gambar
                   </Button>
                   {image ? (
-                    <Text mt={2} color="green.500">Gambar terpilih: {image.split('/').pop()}</Text>
+                    <Text mt={2} color="green.500">
+                      Gambar terpilih: {image.split("/").pop()}
+                    </Text>
                   ) : (
-                    <Text mt={2} color="red.500">Belum ada gambar yang dipilih</Text>
+                    <Text mt={2} color="red.500">
+                      Belum ada gambar yang dipilih
+                    </Text>
                   )}
                 </FormControl>
               </VStack>
@@ -305,14 +366,18 @@ const CreateRetur = ({ route, navigation }) => {
           </Card>
 
           <Center mt={6}>
-          <Button 
-              onPress={addRetur_Barang} 
-              colorScheme="success" 
+            <Button
+              onPress={addRetur_Barang}
+              colorScheme="success"
               borderRadius="md"
               isDisabled={isSaving} // Disable button saat proses simpan
-              leftIcon={isSaving ? <ActivityIndicator size="small" color="white" /> : null} // Spinner saat simpan
+              leftIcon={
+                isSaving ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : null
+              } // Spinner saat simpan
             >
-              {isSaving ? 'Menyimpan...' : 'Simpan'}
+              {isSaving ? "Menyimpan..." : "Simpan"}
             </Button>
           </Center>
 

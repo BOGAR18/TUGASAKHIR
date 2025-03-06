@@ -21,8 +21,17 @@ import { logoutUser } from "../actions/AuthAction";
 
 const ProfileCard = ({ icon, title, value }) => (
   <HStack space={4} alignItems="center" py={3}>
-    <Box bg="blue.50" p={2} borderRadius="lg">
-      <Icon as={Feather} name={icon} size={5} color="blue.500" />
+    <Box
+      bg="blue.50"
+      p={2}
+      borderRadius="lg"
+    >
+      <Icon
+        as={Feather}
+        name={icon}
+        size={5}
+        color="blue.500"
+      />
     </Box>
     <VStack>
       <Text fontSize="sm" color="gray.500">
@@ -35,8 +44,8 @@ const ProfileCard = ({ icon, title, value }) => (
   </HStack>
 );
 
-const Profile = ({ navigation }) => {
-  const [Profile, setProfile] = useState(null);
+const AdminProfile = ({ navigation }) => {
+  const [AdminProfile, setAdminProfile] = useState(null);
 
   const getUserData = async () => {
     try {
@@ -48,7 +57,7 @@ const Profile = ({ navigation }) => {
         const updatedUserData = snapshot.val();
 
         if (updatedUserData) {
-          setProfile(updatedUserData);
+          setAdminProfile(updatedUserData);
         } else {
           console.log("User data not found");
         }
@@ -67,10 +76,15 @@ const Profile = ({ navigation }) => {
     <ScrollView bg="gray.50">
       <Header title="Profile" />
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-
+      
       <Box flex={1} p={4}>
         {/* Profile Card */}
-        <Box bg="white" borderRadius="3xl" shadow="2" overflow="hidden">
+        <Box
+          bg="white"
+          borderRadius="3xl"
+          shadow="2"
+          overflow="hidden"
+        >
           {/* Banner */}
           <Box
             h={32}
@@ -82,12 +96,20 @@ const Profile = ({ navigation }) => {
               },
             }}
           />
-
+          
           {/* Profile Content */}
           <Box px={6} pb={6}>
             {/* Profile Image */}
-            <Box alignItems="center" mt={-24}>
-              <Box bg="white" p={1} borderRadius="full" shadow="3">
+            <Box 
+              alignItems="center"
+              mt={-16}
+            >
+              <Box
+                bg="white"
+                p={1}
+                borderRadius="full"
+                shadow="3"
+              >
                 <Image
                   source={require("../assets/logo.png")}
                   borderRadius="full"
@@ -96,10 +118,10 @@ const Profile = ({ navigation }) => {
                   alt="Profile Logo"
                 />
               </Box>
-
+              
               <VStack space={1} mt={4} alignItems="center">
                 <Heading fontSize="2xl" fontWeight="bold" color="gray.800">
-                  {Profile?.name}
+                  {AdminProfile?.name}
                 </Heading>
                 <Text fontSize="md" color="gray.500" fontWeight="medium">
                   UID JAWA TIMUR
@@ -111,16 +133,20 @@ const Profile = ({ navigation }) => {
 
             {/* Profile Information */}
             <VStack space={2}>
-              <ProfileCard icon="mail" title="Email" value={Profile?.email} />
+              <ProfileCard
+                icon="mail"
+                title="Email"
+                value={AdminProfile?.email}
+              />
               <ProfileCard
                 icon="phone"
                 title="Nomor Telepon"
-                value={Profile?.nomorhp}
+                value={AdminProfile?.nomorhp}
               />
               <ProfileCard
                 icon="shield"
                 title="Status"
-                value={Profile?.status}
+                value={AdminProfile?.status}
               />
             </VStack>
           </Box>
@@ -136,7 +162,12 @@ const Profile = ({ navigation }) => {
             borderRadius="2xl"
             shadow="2"
             leftIcon={
-              <Icon as={Feather} name="log-out" size="sm" color="white" />
+              <Icon
+                as={Feather}
+                name="log-out"
+                size="sm"
+                color="white"
+              />
             }
           >
             Keluar
@@ -147,4 +178,4 @@ const Profile = ({ navigation }) => {
   );
 };
 
-export default Profile;
+export default AdminProfile;

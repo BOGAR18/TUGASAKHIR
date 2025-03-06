@@ -6,16 +6,24 @@ const Splash = ({ navigation }) => {
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
-        const userData = await getData('user');
-        if (userData) {
-          // Navigasi ke halaman utama (karena hanya ada 1 role yaitu user)
-          navigation.replace('Tabs');
+        // Ambil data role dari local storage
+        const userRole = await getData('userRole');
+
+        if (userRole) {
+          // Navigasi berdasarkan role yang ditemukan
+          if (userRole === 'Admin') {
+            navigation.replace('AdminTabs'); // Arahkan ke AdminTabs jika admin
+          } else if (userRole === 'Pegawai') {
+            navigation.replace('StaffTabs'); // Arahkan ke StaffTabs jika pegawai
+          } else {
+            navigation.replace('Tabs'); // Arahkan ke Tabs jika user
+          }
         } else {
-          navigation.replace('Login');
+          navigation.replace('Login'); // Jika tidak ada userRole, arahkan ke Login
         }
       } catch (error) {
         console.error('Error checking user status:', error);
-        navigation.replace('Login');
+        navigation.replace('Login'); // Jika ada error, arahkan ke Login
       }
     };
 
