@@ -9,12 +9,31 @@ import {
   VStack,
   Button,
   Icon,
+  HStack,
+  Divider,
+  Pressable,
 } from "native-base";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Feather } from "@expo/vector-icons";
 import Header from "../components/header";
 import { getData } from "../utils/localStorage";
 import FIREBASE from "../actions/config/FIREBASE";
-import { logoutUser } from "../actions/AuthAction"; 
+import { logoutUser } from "../actions/AuthAction";
+
+const StafProfileCard = ({ icon, title, value }) => (
+  <HStack space={4} alignItems="center" py={3}>
+    <Box bg="blue.50" p={2} borderRadius="lg">
+      <Icon as={Feather} name={icon} size={5} color="blue.500" />
+    </Box>
+    <VStack>
+      <Text fontSize="sm" color="gray.500">
+        {title}
+      </Text>
+      <Text fontSize="md" fontWeight="semibold" color="gray.700">
+        {value || "Tidak tersedia"}
+      </Text>
+    </VStack>
+  </HStack>
+);
 
 const StafProfile = ({ navigation }) => {
   const [StafProfile, setStafProfile] = useState(null);
@@ -45,50 +64,84 @@ const StafProfile = ({ navigation }) => {
   }, [navigation]);
 
   return (
-    <ScrollView bg="#f5f5f5">
+    <ScrollView bg="gray.50">
       <Header title="StafProfile" />
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-      <Box flex={1} justifyContent="space-between" alignItems="center" p={4}>
-        <Box
-          alignSelf="center"
-          width="90%"
-          bg="white"
-          mt={12}
-          shadow={4}
-          borderRadius={10}
-          p={4}
-        >
-          <Box alignItems="center" mt={-12}>
-            <Image
-              source={require("../assets/logo.png")}
-              borderRadius={10}
-              h={150}
-              w={150}
-              alt="StafProfile Logo"
-            />
+
+      <Box flex={1} p={4}>
+        {/* StafProfile Card */}
+        <Box bg="white" borderRadius="3xl" shadow="2" overflow="hidden">
+          {/* Banner */}
+          <Box
+            h={32}
+            bg={{
+              linearGradient: {
+                colors: ["blue.400", "blue.600"],
+                start: [0, 0],
+                end: [1, 0],
+              },
+            }}
+          />
+
+          {/* StafProfile Content */}
+          <Box px={6} pb={6}>
+            {/* StafProfile Image */}
+            <Box alignItems="center" mt={-24}>
+              <Box bg="white" p={1} borderRadius="full" shadow="3">
+                <Image
+                  source={require("../assets/logo.png")}
+                  borderRadius="full"
+                  h={32}
+                  w={32}
+                  alt="StafProfile Logo"
+                />
+              </Box>
+
+              <VStack space={1} mt={4} alignItems="center">
+                <Heading fontSize="2xl" fontWeight="bold" color="gray.800">
+                  {StafProfile?.name}
+                </Heading>
+                <Text fontSize="md" color="gray.500" fontWeight="medium">
+                  UID JAWA TIMUR
+                </Text>
+              </VStack>
+            </Box>
+
+            <Divider my={6} />
+
+            {/* StafProfile Information */}
+            <VStack space={2}>
+              <StafProfileCard icon="mail" title="Email" value={StafProfile?.email} />
+              <StafProfileCard
+                icon="phone"
+                title="Nomor Telepon"
+                value={StafProfile?.nomorhp}
+              />
+              <StafProfileCard
+                icon="shield"
+                title="Status"
+                value={StafProfile?.status}
+              />
+            </VStack>
           </Box>
-          <Heading alignSelf="center" fontSize={22} fontWeight="bold" mt={2}>
-            {StafProfile?.name}
-          </Heading>
-          <Text alignSelf="center" color="gray.500" fontSize={16} mt={1}>
-            {StafProfile?.email}
-          </Text>
-          <Text alignSelf="center" color="gray.500" fontSize={16} mt={1}>
-            {StafProfile?.nomorhp}
-          </Text>
         </Box>
 
-        <Box width="100%" px={5} pb={5} mt={6}>
+        {/* Action Buttons */}
+        <VStack space={3} mt={6}>
           <Button
-            mt={4}
-            size="lg"
-            colorScheme="red"
-            leftIcon={<Icon as={MaterialIcons} name="logout" size="sm" />}
-            onPress={() => logoutUser(navigation)} // Panggil fungsi logout dari authAction.js
+            onPress={() => logoutUser(navigation)}
+            bg="red.500"
+            _pressed={{ bg: "red.600" }}
+            py={4}
+            borderRadius="2xl"
+            shadow="2"
+            leftIcon={
+              <Icon as={Feather} name="log-out" size="sm" color="white" />
+            }
           >
-            Log Out
+            Keluar
           </Button>
-        </Box>
+        </VStack>
       </Box>
     </ScrollView>
   );

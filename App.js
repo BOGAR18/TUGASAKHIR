@@ -129,7 +129,7 @@ const Tabs = () => {
               <View style={{
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#2563eb',
+                // backgroundColor: '#2563eb',
                 borderRadius: 30,
                 padding: 15,
                 elevation: 5,
@@ -308,9 +308,7 @@ const App = () => {
           <Stack.Screen name="AdminPegawai" component={AdminPegawai} options={noHead} />
 
           <Stack.Screen name="StafBarangDetail" component={StafBarangDetail} options={noHead} />
-
-
-
+          <Stack.Screen name="StafBarang" component={StafBarang} options={noHead} />
 
           <Stack.Screen name="BeritaAcara" component={BeritaAcara} options={noHead} />
         </Stack.Navigator>

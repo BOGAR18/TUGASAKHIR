@@ -427,6 +427,7 @@ const CreateBarang = ({ navigation }) => {
                 borderRadius="lg"
                 borderWidth={1.5}
                 py={3}
+                isReadOnly={true} // Mencegah perubahan langsung
                 _selectedItem={{
                   bg: "blue.100",
                   endIcon: <Icon as={MaterialIcons} name="check" size={5} />,
@@ -451,7 +452,7 @@ const CreateBarang = ({ navigation }) => {
                 <Input
                   placeholder="Pilih Tanggal Pengajuan"
                   value={formData.tanggalPeminjaman || ""}
-                  editable={false}
+                  isReadOnly={true} // Mencegah keyboard muncul
                   borderRadius="lg"
                   borderWidth={1.5}
                   py={3}
@@ -500,7 +501,7 @@ const CreateBarang = ({ navigation }) => {
                   <Input
                     placeholder="Pilih Tanggal Kembali"
                     value={formData.tanggalKembali || ""}
-                    editable={false}
+                    isReadOnly={true} // Mencegah keyboard muncul
                     borderRadius="lg"
                     borderWidth={1.5}
                     py={3}
@@ -544,7 +545,6 @@ const CreateBarang = ({ navigation }) => {
                 )}
               </FormControl>
             )}
-
             {/* Upload Surat Section */}
             <FormControl>
               <FormControl.Label _text={{ fontWeight: "bold" }}>
@@ -617,7 +617,7 @@ const CreateBarang = ({ navigation }) => {
 
               {/* Nama Barang Select */}
               <FormControl mb={4}>
-                <FormControl.Label _text={{ fontWeight: "bold" }}>
+                <FormControl.Label _text={{ fontWeight: "bold" }} >
                   Nama Barang
                 </FormControl.Label>
                 <Select
@@ -629,6 +629,7 @@ const CreateBarang = ({ navigation }) => {
                   borderRadius="lg"
                   borderWidth={1.5}
                   py={3}
+                  isReadOnly={true} // Prevent direct editing
                   _selectedItem={{
                     bg: "blue.100",
                     endIcon: <Icon as={MaterialIcons} name="check" size={5} />,
@@ -658,7 +659,7 @@ const CreateBarang = ({ navigation }) => {
                   </FormControl.Label>
                   <Input
                     value={item.kodeBarang}
-                    isDisabled
+                    isReadOnly={true} // Prevent keyboard
                     bg="gray.50"
                     borderRadius="lg"
                     borderWidth={1.5}
@@ -671,7 +672,7 @@ const CreateBarang = ({ navigation }) => {
                   </FormControl.Label>
                   <Input
                     value={item.jenisBarang}
-                    isDisabled
+                    isReadOnly={true} // Prevent keyboard
                     bg="gray.50"
                     borderRadius="lg"
                     borderWidth={1.5}
@@ -687,7 +688,7 @@ const CreateBarang = ({ navigation }) => {
                 </FormControl.Label>
                 <Input
                   value={item.kategoriBarang}
-                  isDisabled
+                  isReadOnly={true} // Prevent keyboard
                   bg="gray.50"
                   borderRadius="lg"
                   borderWidth={1.5}
@@ -702,7 +703,7 @@ const CreateBarang = ({ navigation }) => {
                 </FormControl.Label>
                 <Input
                   type="number"
-                  value={item.jumlahBarang}
+                  value={item.jumlahBarang.toString()}
                   onChangeText={(value) =>
                     handleInputChange(index, "jumlahBarang", value)
                   }
